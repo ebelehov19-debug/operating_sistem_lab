@@ -1,0 +1,5 @@
+foreach(program IN ITEMS parent child1 child2)
+    add_executable(${program} ${program}.c io.c)
+    target_include_directories(${program} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+    target_compile_options(${program} PRIVATE -Wall -Wextra -g)
+endforeach()
