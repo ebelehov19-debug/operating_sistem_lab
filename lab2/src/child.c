@@ -5,22 +5,10 @@
 
 #include "io.h"
 
-int main(int argc, char *argv[])
+int main(void)
 {
-    if (argc != 2)
-    {
-        fprintf(stderr, "Использование: %s <файл_для_записи_результата>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    const char *out_path = argv[1];
-    int out_fd = safe_open_write(out_path);
-    safe_dup2(out_fd, STDOUT_FILENO);
-    if (out_fd != STDOUT_FILENO)
-        safe_close(out_fd);
-
-    fprintf(stderr, "[child pid=%d] запущен, результаты пишутся в файл '%s'\n",
-            getpid(), out_path);
+    fprintf(stderr, "[child pid=%d] запущен, результат записывается в стандартный вывод\n",
+            getpid());
 
     char *line = NULL;
     size_t cap = 0;

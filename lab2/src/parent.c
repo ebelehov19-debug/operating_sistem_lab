@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #include "io.h"
 
@@ -13,6 +14,7 @@
 static pid_t owner_pid;
 static pid_t children[2] = {-1, -1};
 static int channels[2][2] = {{-1, -1}, {-1, -1}};
+static int output_fds[2] = {-1, -1};
 
 static void cleanup(void)
 {
@@ -22,6 +24,9 @@ static void cleanup(void)
         for (int j = 0; j < 2; ++j)
             if (channels[i][j] >= 0)
                 close(channels[i][j]);
+    for (int i = 0; i < 2; ++i)
+        if (output_fds[i] >= 0 && close(output_fds[i]) == -1)
+            perror("close (выходной файл)");
     for (int i = 0; i < 2; ++i)
         if (children[i] > 0)
             while (waitpid(children[i], NULL, 0) == -1 && errno == EINTR) {}
@@ -51,27 +56,29 @@ static void read_filename(const char *prompt, char **out_line)
     }
 }
 
-static pid_t spawn_child(int read_fd, int write_fd_to_close,
-                          int other_read_fd, int other_write_fd,
-                          const char *program, const char *out_file, const char *label)
+static pid_t spawn_child(int index, const char *out_file, const char *label)
 {
     if (fflush(stdout) == EOF)
         die("fflush");
     pid_t pid = safe_fork();
     if (pid == 0)
     {
-        safe_dup2(read_fd, STDIN_FILENO);
+        safe_dup2(channels[index][0], STDIN_FILENO);
+        safe_dup2(output_fds[index], STDOUT_FILENO);
 
-        if (read_fd != STDIN_FILENO)
-            safe_close(read_fd);
-        safe_close(write_fd_to_close);
-        safe_close(other_read_fd);
-        safe_close(other_write_fd);
+        for (int i = 0; i < 2; ++i)
+        {
+            for (int j = 0; j < 2; ++j)
+                if (channels[i][j] > STDERR_FILENO)
+                    safe_close(channels[i][j]);
+            if (output_fds[i] > STDERR_FILENO)
+                safe_close(output_fds[i]);
+        }
 
-        char *argv_child[] = { (char *)program, (char *)out_file, NULL };
-        execv(program, argv_child);
+        char *argv_child[] = { "child", NULL };
+        execv("./child", argv_child);
 
-        perror(program);
+        perror("execv(./child)");
         _exit(EXIT_FAILURE);
     }
 
@@ -90,6 +97,9 @@ int main(void)
     }
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
         die("signal(SIGPIPE)");
+    for (int fd = STDIN_FILENO; fd <= STDERR_FILENO; ++fd)
+        if (fcntl(fd, F_GETFD) == -1)
+            die("fcntl (стандартный дескриптор)");
     printf("[parent %d] запущен\n", getpid());
 
     char *file1 = NULL, *file2 = NULL;
@@ -103,15 +113,24 @@ int main(void)
         return EXIT_FAILURE;
     }
 
+    output_fds[0] = safe_open_write(file1);
+    output_fds[1] = safe_open_write(file2);
+
     int *pipe1 = channels[0];
     int *pipe2 = channels[1];
     safe_pipe(pipe1);
     safe_pipe(pipe2);
 
-    pid_t pid1 = spawn_child(pipe1[0], pipe1[1], pipe2[0], pipe2[1], "./child", file1, "child1");
+    pid_t pid1 = spawn_child(0, file1, "child1");
     children[0] = pid1;
-    pid_t pid2 = spawn_child(pipe2[0], pipe2[1], pipe1[0], pipe1[1], "./child", file2, "child2");
+    pid_t pid2 = spawn_child(1, file2, "child2");
     children[1] = pid2;
+
+    for (int i = 0; i < 2; ++i)
+    {
+        safe_close(output_fds[i]);
+        output_fds[i] = -1;
+    }
 
     safe_close(pipe1[0]);
     pipe1[0] = -1;
