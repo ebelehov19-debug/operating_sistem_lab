@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     if (out_fd != STDOUT_FILENO)
         safe_close(out_fd);
 
-    fprintf(stderr, "[child1 pid=%d] запущен, результаты пишутся в файл '%s'\n",
+    fprintf(stderr, "[child pid=%d] запущен, результаты пишутся в файл '%s'\n",
             getpid(), out_path);
 
     char *line = NULL;
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
         remove_vowels(line);
 
-        fprintf(stderr, "[child1 pid=%d] -> \"%s\"\n", getpid(), line);
+        fprintf(stderr, "[child pid=%d] -> \"%s\"\n", getpid(), line);
 
         safe_write_all(STDOUT_FILENO, line, (size_t)strlen(line));
         safe_write_all(STDOUT_FILENO, "\n", 1);
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     free(line);
     safe_close(STDOUT_FILENO);
 
-    fprintf(stderr, "[child1 pid=%d] поток ввода закрыт родителем, завершаюсь\n", getpid());
+    fprintf(stderr, "[child pid=%d] поток ввода закрыт родителем, завершаюсь\n", getpid());
 
     return EXIT_SUCCESS;
 }

@@ -95,7 +95,6 @@ int safe_waitpid(pid_t pid, const char *who)
         ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-/* В корректном UTF-8 каждый символ начинается с байта, отличного от 10xxxxxx. */
 size_t utf8_length(const char *s, size_t bytes)
 {
     size_t length = 0;

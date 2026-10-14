@@ -1,6 +1,5 @@
 /build*/
 /cmake-build-*/
 /parent
-/child1
-/child2
+/child
 *.o

@@ -14,7 +14,6 @@ static pid_t owner_pid;
 static pid_t children[2] = {-1, -1};
 static int channels[2][2] = {{-1, -1}, {-1, -1}};
 
-/* При ошибке закрываем каналы: дети получают EOF, затем собираем их статусы. */
 static void cleanup(void)
 {
     if (getpid() != owner_pid)
@@ -109,9 +108,9 @@ int main(void)
     safe_pipe(pipe1);
     safe_pipe(pipe2);
 
-    pid_t pid1 = spawn_child(pipe1[0], pipe1[1], pipe2[0], pipe2[1], "./child1", file1, "child1");
+    pid_t pid1 = spawn_child(pipe1[0], pipe1[1], pipe2[0], pipe2[1], "./child", file1, "child1");
     children[0] = pid1;
-    pid_t pid2 = spawn_child(pipe2[0], pipe2[1], pipe1[0], pipe1[1], "./child2", file2, "child2");
+    pid_t pid2 = spawn_child(pipe2[0], pipe2[1], pipe1[0], pipe1[1], "./child", file2, "child2");
     children[1] = pid2;
 
     safe_close(pipe1[0]);
